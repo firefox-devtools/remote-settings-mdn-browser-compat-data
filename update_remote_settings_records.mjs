@@ -4,23 +4,16 @@
 
 /* global process */
 
-// This script consumes env variables:
+// This script consumes the following env variables:
 // - AUTHORIZATION (mandatory): Raw authorization header (e.g. `AUTHORIZATION='Bearer XXXXXXXXXXXXX'`)
 // - SERVER (mandatory): Writer server URL (eg. https://settings-writer.stage.mozaws.net/v1)
-// - ENVIRONMENT (optional): dev, stage, prod. When set to `dev`, the data will be automatically published.
+// - ENVIRONMENT (optional): dev, stage, prod. When set to `dev`, the script will approve its own changes.
 // - DRY_RUN (optional): If set to 1, no changes will be made to the collection, this will
 //                       only log the actions that would be done.
 
-// The Compatibility panel detects issues by comparing against official MDN compatibility data
-// at https://github.com/mdn/browser-compat-data.
-
-// The subsets from the dataset required by the Compatibility panel are:
-// * browsers: https://github.com/mdn/browser-compat-data/tree/main/browsers
-// * css.properties: https://github.com/mdn/browser-compat-data/tree/main/css
-
-// The MDN compatibility data is available as a node package ("@mdn/browser-compat-data").
-// This node script fetches `browsers.json` and `css-properties.json` and updates records
-// from the appropriate collection in RemoteSettings.
+// This node script fetches `https://github.com/mdn/browser-compat-data/tree/main/browsers`
+// and updates records from the associated collection in RemoteSettings.
+// In the future, it will also handle https://github.com/mdn/browser-compat-data/tree/main/css.
 
 import fetch from "node-fetch";
 import compatData from "@mdn/browser-compat-data";
@@ -54,6 +47,10 @@ if (
 const rsBrowsersCollectionEndpoint = `${process.env.SERVER}/buckets/main-workspace/collections/devtools-compatibility-browsers`;
 const rsBrowsersRecordsEndpoint = `${rsBrowsersCollectionEndpoint}/records`;
 const isDryRun = process.env.DRY_RUN == "1";
+const headers = {
+  "Content-Type": "application/json",
+  Authorization: process.env.AUTHORIZATION,
+};
 
 update()
   .then(() => {
@@ -65,7 +62,6 @@ update()
   });
 
 async function update() {
-  console.log(`Get existing records from ${rsBrowsersCollectionEndpoint}`);
   const records = await getRSRecords();
   const operations = { added: [], updated: [], removed: [] };
 
@@ -147,24 +143,18 @@ async function update() {
     console.log("Browsers data synced ✅\nRefreshed records:");
     console.table(refreshedRecords);
     if (process.env.ENVIRONMENT === "dev") {
-      console.log("Approving changes");
       await approveChanges();
-      console.log("Changes approved ✅");
     } else {
-      console.log("Requesting review");
       await requestReview();
-      console.log("Review requested ✅");
     }
   }
 }
 
 async function getRSRecords() {
+  console.log(`Get existing records from ${rsBrowsersCollectionEndpoint}`);
   const response = await fetch(rsBrowsersRecordsEndpoint, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: process.env.AUTHORIZATION,
-    },
+    headers,
   });
   if (response.status !== 200) {
     throw new Error(
@@ -182,7 +172,12 @@ async function getRSRecords() {
  * @returns {Boolean} Whether the API call was succesful or not
  */
 async function createRecord(browserMdn) {
-  console.log("Create", browserMdn.browserid, browserMdn.version);
+  console.log(
+    isDryRun ? "[DRY_RUN]" : "",
+    "Create",
+    browserMdn.browserid,
+    browserMdn.version
+  );
   if (isDryRun) {
     return true;
   }
@@ -190,10 +185,7 @@ async function createRecord(browserMdn) {
   const response = await fetch(`${rsBrowsersRecordsEndpoint}`, {
     method: "POST",
     body: JSON.stringify({ data: browserMdn }),
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: process.env.AUTHORIZATION,
-    },
+    headers,
   });
   const succesful = response.status == 201;
   if (!succesful) {
@@ -213,7 +205,12 @@ async function createRecord(browserMdn) {
  * @returns {Boolean} Whether the API call was succesful or not
  */
 async function updateRecord(record, browserMdn) {
-  console.log("Update", record.browserid, record.version);
+  console.log(
+    isDryRun ? "[DRY_RUN]" : "",
+    "Update",
+    record.browserid,
+    record.version
+  );
   if (isDryRun) {
     return true;
   }
@@ -221,10 +218,7 @@ async function updateRecord(record, browserMdn) {
   const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
     method: "PUT",
     body: JSON.stringify({ data: browserMdn }),
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: process.env.AUTHORIZATION,
-    },
+    headers,
   });
   const succesful = response.status == 200;
   if (!succesful) {
@@ -242,17 +236,19 @@ async function updateRecord(record, browserMdn) {
  * @returns {Boolean} Whether the API call was succesful or not
  */
 async function deleteRecord(record) {
-  console.log("Delete", record.browserid, record.version);
+  console.log(
+    isDryRun ? "[DRY_RUN]" : "",
+    "Delete",
+    record.browserid,
+    record.version
+  );
   if (isDryRun) {
     return true;
   }
 
   const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: process.env.AUTHORIZATION,
-    },
+    headers,
   });
   const succesful = response.status == 200;
   if (!succesful) {
@@ -267,6 +263,7 @@ async function deleteRecord(record) {
  * Ask for review on the collection.
  */
 async function requestReview() {
+  console.log(isDryRun ? "[DRY_RUN]" : "", "Requesting review");
   if (isDryRun) {
     return true;
   }
@@ -274,12 +271,11 @@ async function requestReview() {
   const response = await fetch(rsBrowsersCollectionEndpoint, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-review" } }),
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: process.env.AUTHORIZATION,
-    },
+    headers,
   });
-  if (response.status !== 200) {
+  if (response.status === 200) {
+    console.log("Review requested ✅");
+  } else {
     console.warn(
       `Couldn't request review: "[${response.status}] ${response.statusText}"`
     );
@@ -291,6 +287,7 @@ async function requestReview() {
  * ⚠️ This only works on the `dev` server.
  */
 async function approveChanges() {
+  console.log(isDryRun ? "[DRY_RUN]" : "", "Approving changes");
   if (isDryRun) {
     return true;
   }
@@ -298,12 +295,11 @@ async function approveChanges() {
   const response = await fetch(rsBrowsersCollectionEndpoint, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-sign" } }),
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: process.env.AUTHORIZATION,
-    },
+    headers,
   });
-  if (response.status !== 200) {
+  if (response.status === 200) {
+    console.log("Changes approved ✅");
+  } else {
     console.warn(
       `Couldn't automatically approve changes: "[${response.status}] ${response.statusText}"`
     );
