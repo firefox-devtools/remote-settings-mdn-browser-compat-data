@@ -16,7 +16,12 @@
 // In the future, it will also handle https://github.com/mdn/browser-compat-data/tree/main/css.
 
 import fetch from "node-fetch";
-import compatData from "@mdn/browser-compat-data";
+
+// Use the legacy wrapper to support all Node 12+ versions.
+// If we only support Node 16+, can be updated to:
+//   import bcd from '@mdn/browser-compat-data' assert { type: 'json' };
+// See https://github.com/mdn/browser-compat-data.
+import compatData from "@mdn/browser-compat-data/forLegacyNode";
 
 const SUCCESS_RET_VALUE = 0;
 const FAILURE_RET_VALUE = 1;
