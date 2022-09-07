@@ -5,11 +5,10 @@
 /* global process */
 
 // This script consumes the following env variables:
-// - FX_REMOTE_SETTINGS_WRITER_USER (mandatory): User
-// - FX_REMOTE_SETTINGS_WRITER_PASS (mandatory): Password
-// - FX_REMOTE_SETTINGS_WRITER_SERVER (mandatory): Writer server URL (eg. https://settings-writer.stage.mozaws.net/v1)
-// - FX_REMOTE_SETTINGS_ENVIRONMENT (optional): dev, stage, prod. When set to `dev`, the script will approve its own changes.
-// - FX_REMOTE_SETTINGS_DRY_RUN (optional): If set to 1, no changes will be made to the collection, this will
+// - AUTHORIZATION (mandatory): Raw authorization header (e.g. `AUTHORIZATION='Bearer XXXXXXXXXXXXX'`)
+// - SERVER (mandatory): Writer server URL (eg. https://settings-writer.stage.mozaws.net/v1)
+// - ENVIRONMENT (optional): dev, stage, prod. When set to `dev`, the script will approve its own changes.
+// - DRY_RUN (optional): If set to 1, no changes will be made to the collection, this will
 //                       only log the actions that would be done.
 // This node script fetches `https://github.com/mdn/browser-compat-data/tree/main/browsers`
 // and updates records from the associated collection in RemoteSettings.
@@ -28,45 +27,46 @@ const SUCCESS_RET_VALUE = 0;
 const FAILURE_RET_VALUE = 1;
 const VALID_ENVIRONMENTS = ["dev", "stage", "prod"];
 
-if (
-  !process.env.FX_REMOTE_SETTINGS_WRITER_USER ||
-  !process.env.FX_REMOTE_SETTINGS_WRITER_PASS
-) {
-  console.error(
-    `Both FX_REMOTE_SETTINGS_WRITER_USER and FX_REMOTE_SETTINGS_WRITER_PASS environment variables need to be set`
-  );
+if (!process.env.AUTHORIZATION) {
+  console.error(`AUTHORIZATION environment variable needs to be set`);
   process.exit(FAILURE_RET_VALUE);
 }
 
-if (!process.env.FX_REMOTE_SETTINGS_WRITER_SERVER) {
+if (!process.env.SERVER) {
   console.error(
-    `FX_REMOTE_SETTINGS_WRITER_SERVER environment variable needs to be set`
+    `SERVER environment variable needs to be set`
   );
   process.exit(FAILURE_RET_VALUE);
 }
 
 if (
-  process.env.FX_REMOTE_SETTINGS_ENVIRONMENT &&
+  process.env.ENVIRONMENT &&
   !VALID_ENVIRONMENTS.includes(process.env.ENVIRONMENT)
 ) {
   console.error(
-    `FX_REMOTE_SETTINGS_ENVIRONMENT environment variable needs to be set to one of the following values: ${VALID_ENVIRONMENTS.join(
+    `ENVIRONMENT environment variable needs to be set to one of the following values: ${VALID_ENVIRONMENTS.join(
       ", "
     )}`
   );
   process.exit(FAILURE_RET_VALUE);
 }
 
-const rsBrowsersCollectionEndpoint = `${process.env.FX_REMOTE_SETTINGS_WRITER_SERVER}/buckets/main-workspace/collections/devtools-compatibility-browsers`;
+const rsBrowsersCollectionEndpoint = `${process.env.SERVER}/buckets/main-workspace/collections/devtools-compatibility-browsers`;
 const rsBrowsersRecordsEndpoint = `${rsBrowsersCollectionEndpoint}/records`;
-const isDryRun = process.env.FX_REMOTE_SETTINGS_DRY_RUN == "1";
+const isDryRun = process.env.DRY_RUN == "1";
 
-const headers = {
-  "Content-Type": "application/json",
-  Authorization: `Basic ${btoa(
-    `${process.env.FX_REMOTE_SETTINGS_WRITER_USER}:${process.env.FX_REMOTE_SETTINGS_WRITER_PASS}`
-  )}`,
-};
+
+if (process.env.AUTHORIZATION.includes("Bearer")) {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: process.env.AUTHORIZATION,
+  }
+} else {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Basic ${btoa(${process.env.AUTHORIZATION})}`,
+  };
+}
 
 update()
   .then(() => {
@@ -158,7 +158,7 @@ async function update() {
     const refreshedRecords = await getRSRecords();
     console.log("Browsers data synced ✅\nRefreshed records:");
     console.table(refreshedRecords);
-    if (process.env.FX_REMOTE_SETTINGS_ENVIRONMENT === "dev") {
+    if (process.env.ENVIRONMENT === "dev") {
       await approveChanges();
     } else {
       await requestReview();
