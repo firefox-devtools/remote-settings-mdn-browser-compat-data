@@ -55,17 +55,11 @@ const rsBrowsersCollectionEndpoint = `${process.env.SERVER}/buckets/main-workspa
 const rsBrowsersRecordsEndpoint = `${rsBrowsersCollectionEndpoint}/records`;
 const isDryRun = process.env.DRY_RUN == "1";
 
-
-if (process.env.AUTHORIZATION.includes("Bearer")) {
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: process.env.AUTHORIZATION,
-  }
-} else {
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: `Basic ${btoa(${process.env.AUTHORIZATION})}`,
-  };
+const headers = {
+  "Content-Type": "application/json",
+  Authorization: process.env.AUTHORIZATION.startsWith("Bearer ")
+    ? process.env.AUTHORIZATION
+    : `Basic ${btoa(process.env.AUTHORIZATION)}`,
 }
 
 update()
