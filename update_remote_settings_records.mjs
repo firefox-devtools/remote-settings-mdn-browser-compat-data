@@ -17,11 +17,9 @@
 import fetch from "node-fetch";
 import btoa from "btoa";
 
-// Use the legacy wrapper to support all Node 12+ versions.
-// If we only support Node 16+, can be updated to:
-//   import bcd from '@mdn/browser-compat-data' assert { type: 'json' };
 // See https://github.com/mdn/browser-compat-data.
-import compatData from "@mdn/browser-compat-data/forLegacyNode";
+const response = await fetch("https://unpkg.com/@mdn/browser-compat-data/data.json");
+const compatData = await response.json();
 
 const SUCCESS_RET_VALUE = 0;
 const FAILURE_RET_VALUE = 1;
