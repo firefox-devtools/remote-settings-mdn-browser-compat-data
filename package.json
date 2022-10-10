@@ -5,8 +5,7 @@
     "ingest": "node update_remote_settings_records.mjs"
   },
   "devDependencies": {
-    "@mdn/browser-compat-data": "latest",
     "btoa": "1.2.1",
-    "node-fetch": "^3.2.0"
+    "node-fetch": "^3.2.10"
   }
 }
