@@ -6,7 +6,7 @@
 
 // This script consumes the following env variables:
 // - AUTHORIZATION (mandatory): Raw authorization header (e.g. `AUTHORIZATION='Bearer XXXXXXXXXXXXX'`)
-// - SERVER (mandatory): Writer server URL (eg. https://settings-writer.stage.mozaws.net/v1)
+// - SERVER (mandatory): Writer server URL (eg. https://remote-settings.allizom.org/v1)
 // - ENVIRONMENT (optional): dev, stage, prod. When set to `dev`, the script will approve its own changes.
 // - DRY_RUN (optional): If set to 1, no changes will be made to the collection, this will
 //                       only log the actions that would be done.
