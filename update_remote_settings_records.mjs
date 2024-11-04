@@ -155,7 +155,7 @@ async function update() {
 }
 
 async function getRSRecords() {
-  console.log(`Get existing records from ${COLLECTION_ENDPOINT}`);
+  console.log(`Get existing records from ${RECORDS_ENDPOINT}`);
   const response = await fetch(RECORDS_ENDPOINT, {
     method: "GET",
     headers: HEADERS,
