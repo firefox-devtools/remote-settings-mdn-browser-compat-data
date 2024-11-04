@@ -45,9 +45,9 @@ if (
   process.exit(FAILURE_RET_VALUE);
 }
 
-const rsBrowsersCollectionEndpoint = `${process.env.SERVER}/buckets/main-workspace/collections/devtools-compatibility-browsers`;
-const rsBrowsersRecordsEndpoint = `${rsBrowsersCollectionEndpoint}/records`;
-const isDryRun = process.env.DRY_RUN == "1";
+const COLLECTION_ENDPOINT = `${process.env.SERVER}/buckets/main-workspace/collections/devtools-compatibility-browsers`;
+const RECORDS_ENDPOINT = `${COLLECTION_ENDPOINT}/records`;
+const IS_DRY_RUN = process.env.DRY_RUN == "1";
 
 const HEADERS = {
   "Content-Type": "application/json",
@@ -155,8 +155,8 @@ async function update() {
 }
 
 async function getRSRecords() {
-  console.log(`Get existing records from ${rsBrowsersCollectionEndpoint}`);
-  const response = await fetch(rsBrowsersRecordsEndpoint, {
+  console.log(`Get existing records from ${COLLECTION_ENDPOINT}`);
+  const response = await fetch(RECORDS_ENDPOINT, {
     method: "GET",
     headers: HEADERS,
   });
@@ -177,16 +177,16 @@ async function getRSRecords() {
  */
 async function createRecord(browserMdn) {
   console.log(
-    isDryRun ? "[DRY_RUN]" : "",
+    IS_DRY_RUN ? "[DRY_RUN]" : "",
     "Create",
     browserMdn.browserid,
     browserMdn.version
   );
-  if (isDryRun) {
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(`${rsBrowsersRecordsEndpoint}`, {
+  const response = await fetch(`${RECORDS_ENDPOINT}`, {
     method: "POST",
     body: JSON.stringify({ data: browserMdn }),
     headers: HEADERS,
@@ -210,16 +210,16 @@ async function createRecord(browserMdn) {
  */
 async function updateRecord(record, browserMdn) {
   console.log(
-    isDryRun ? "[DRY_RUN]" : "",
+    IS_DRY_RUN ? "[DRY_RUN]" : "",
     "Update",
     record.browserid,
     record.version
   );
-  if (isDryRun) {
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
+  const response = await fetch(`${RECORDS_ENDPOINT}/${record.id}`, {
     method: "PUT",
     body: JSON.stringify({ data: browserMdn }),
     headers: HEADERS,
@@ -241,16 +241,16 @@ async function updateRecord(record, browserMdn) {
  */
 async function deleteRecord(record) {
   console.log(
-    isDryRun ? "[DRY_RUN]" : "",
+    IS_DRY_RUN ? "[DRY_RUN]" : "",
     "Delete",
     record.browserid,
     record.version
   );
-  if (isDryRun) {
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
+  const response = await fetch(`${RECORDS_ENDPOINT}/${record.id}`, {
     method: "DELETE",
     headers: HEADERS,
   });
@@ -267,12 +267,12 @@ async function deleteRecord(record) {
  * Ask for review on the collection.
  */
 async function requestReview() {
-  console.log(isDryRun ? "[DRY_RUN]" : "", "Requesting review");
-  if (isDryRun) {
+  console.log(IS_DRY_RUN ? "[DRY_RUN]" : "", "Requesting review");
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(rsBrowsersCollectionEndpoint, {
+  const response = await fetch(COLLECTION_ENDPOINT, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-review" } }),
     headers: HEADERS,
@@ -291,12 +291,12 @@ async function requestReview() {
  * ⚠️ This only works on the `dev` server.
  */
 async function approveChanges() {
-  console.log(isDryRun ? "[DRY_RUN]" : "", "Approving changes");
-  if (isDryRun) {
+  console.log(IS_DRY_RUN ? "[DRY_RUN]" : "", "Approving changes");
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(rsBrowsersCollectionEndpoint, {
+  const response = await fetch(COLLECTION_ENDPOINT, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-sign" } }),
     headers: HEADERS,
