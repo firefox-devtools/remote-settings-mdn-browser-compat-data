@@ -49,7 +49,7 @@ const rsBrowsersCollectionEndpoint = `${process.env.SERVER}/buckets/main-workspa
 const rsBrowsersRecordsEndpoint = `${rsBrowsersCollectionEndpoint}/records`;
 const isDryRun = process.env.DRY_RUN == "1";
 
-const headers = {
+const HEADERS = {
   "Content-Type": "application/json",
   Authorization: process.env.AUTHORIZATION.startsWith("Bearer ")
     ? process.env.AUTHORIZATION
@@ -158,7 +158,7 @@ async function getRSRecords() {
   console.log(`Get existing records from ${rsBrowsersCollectionEndpoint}`);
   const response = await fetch(rsBrowsersRecordsEndpoint, {
     method: "GET",
-    headers,
+    headers: HEADERS,
   });
   if (response.status !== 200) {
     throw new Error(
@@ -189,7 +189,7 @@ async function createRecord(browserMdn) {
   const response = await fetch(`${rsBrowsersRecordsEndpoint}`, {
     method: "POST",
     body: JSON.stringify({ data: browserMdn }),
-    headers,
+    headers: HEADERS,
   });
   const succesful = response.status == 201;
   if (!succesful) {
@@ -222,7 +222,7 @@ async function updateRecord(record, browserMdn) {
   const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
     method: "PUT",
     body: JSON.stringify({ data: browserMdn }),
-    headers,
+    headers: HEADERS,
   });
   const succesful = response.status == 200;
   if (!succesful) {
@@ -252,7 +252,7 @@ async function deleteRecord(record) {
 
   const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
     method: "DELETE",
-    headers,
+    headers: HEADERS,
   });
   const succesful = response.status == 200;
   if (!succesful) {
@@ -275,7 +275,7 @@ async function requestReview() {
   const response = await fetch(rsBrowsersCollectionEndpoint, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-review" } }),
-    headers,
+    headers: HEADERS,
   });
   if (response.status === 200) {
     console.log("Review requested ✅");
@@ -299,7 +299,7 @@ async function approveChanges() {
   const response = await fetch(rsBrowsersCollectionEndpoint, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-sign" } }),
-    headers,
+    headers: HEADERS,
   });
   if (response.status === 200) {
     console.log("Changes approved ✅");
