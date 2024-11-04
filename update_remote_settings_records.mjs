@@ -17,10 +17,6 @@
 import fetch from "node-fetch";
 import btoa from "btoa";
 
-// See https://github.com/mdn/browser-compat-data.
-const response = await fetch("https://unpkg.com/@mdn/browser-compat-data/data.json");
-const compatData = await response.json();
-
 const SUCCESS_RET_VALUE = 0;
 const FAILURE_RET_VALUE = 1;
 const VALID_ENVIRONMENTS = ["dev", "stage", "prod"];
@@ -73,7 +69,7 @@ async function update() {
   const records = await getRSRecords();
   const operations = { added: [], updated: [], removed: [] };
 
-  const browsersMdn = getFlatBrowsersMdnData();
+  const browsersMdn = await getFlatBrowsersMdnData();
 
   for (const browserMdn of browsersMdn) {
     const rsRecord = records.find(
@@ -314,7 +310,11 @@ async function approveChanges() {
   }
 }
 
-function getFlatBrowsersMdnData() {
+async function getFlatBrowsersMdnData() {
+  // See https://github.com/mdn/browser-compat-data.
+  const response = await fetch("https://unpkg.com/@mdn/browser-compat-data/data.json");
+  const compatData = await response.json();
+
   const browsers = [];
   for (const [browserid, browserInfo] of Object.entries(compatData.browsers)) {
     for (const [releaseNumber, releaseInfo] of Object.entries(
