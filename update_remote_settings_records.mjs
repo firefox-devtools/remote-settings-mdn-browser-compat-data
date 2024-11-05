@@ -17,10 +17,6 @@
 import fetch from "node-fetch";
 import btoa from "btoa";
 
-// See https://github.com/mdn/browser-compat-data.
-const response = await fetch("https://unpkg.com/@mdn/browser-compat-data/data.json");
-const compatData = await response.json();
-
 const SUCCESS_RET_VALUE = 0;
 const FAILURE_RET_VALUE = 1;
 const VALID_ENVIRONMENTS = ["dev", "stage", "prod"];
@@ -49,11 +45,11 @@ if (
   process.exit(FAILURE_RET_VALUE);
 }
 
-const rsBrowsersCollectionEndpoint = `${process.env.SERVER}/buckets/main-workspace/collections/devtools-compatibility-browsers`;
-const rsBrowsersRecordsEndpoint = `${rsBrowsersCollectionEndpoint}/records`;
-const isDryRun = process.env.DRY_RUN == "1";
+const COLLECTION_ENDPOINT = `${process.env.SERVER}/buckets/main-workspace/collections/devtools-compatibility-browsers`;
+const RECORDS_ENDPOINT = `${COLLECTION_ENDPOINT}/records`;
+const IS_DRY_RUN = process.env.DRY_RUN == "1";
 
-const headers = {
+const HEADERS = {
   "Content-Type": "application/json",
   Authorization: process.env.AUTHORIZATION.startsWith("Bearer ")
     ? process.env.AUTHORIZATION
@@ -73,7 +69,7 @@ async function update() {
   const records = await getRSRecords();
   const operations = { added: [], updated: [], removed: [] };
 
-  const browsersMdn = getFlatBrowsersMdnData();
+  const browsersMdn = await getFlatBrowsersMdnData();
 
   for (const browserMdn of browsersMdn) {
     const rsRecord = records.find(
@@ -159,10 +155,10 @@ async function update() {
 }
 
 async function getRSRecords() {
-  console.log(`Get existing records from ${rsBrowsersCollectionEndpoint}`);
-  const response = await fetch(rsBrowsersRecordsEndpoint, {
+  console.log(`Get existing records from ${RECORDS_ENDPOINT}`);
+  const response = await fetch(RECORDS_ENDPOINT, {
     method: "GET",
-    headers,
+    headers: HEADERS,
   });
   if (response.status !== 200) {
     throw new Error(
@@ -181,19 +177,19 @@ async function getRSRecords() {
  */
 async function createRecord(browserMdn) {
   console.log(
-    isDryRun ? "[DRY_RUN]" : "",
+    IS_DRY_RUN ? "[DRY_RUN]" : "",
     "Create",
     browserMdn.browserid,
     browserMdn.version
   );
-  if (isDryRun) {
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(`${rsBrowsersRecordsEndpoint}`, {
+  const response = await fetch(`${RECORDS_ENDPOINT}`, {
     method: "POST",
     body: JSON.stringify({ data: browserMdn }),
-    headers,
+    headers: HEADERS,
   });
   const succesful = response.status == 201;
   if (!succesful) {
@@ -214,19 +210,19 @@ async function createRecord(browserMdn) {
  */
 async function updateRecord(record, browserMdn) {
   console.log(
-    isDryRun ? "[DRY_RUN]" : "",
+    IS_DRY_RUN ? "[DRY_RUN]" : "",
     "Update",
     record.browserid,
     record.version
   );
-  if (isDryRun) {
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
+  const response = await fetch(`${RECORDS_ENDPOINT}/${record.id}`, {
     method: "PUT",
     body: JSON.stringify({ data: browserMdn }),
-    headers,
+    headers: HEADERS,
   });
   const succesful = response.status == 200;
   if (!succesful) {
@@ -245,18 +241,18 @@ async function updateRecord(record, browserMdn) {
  */
 async function deleteRecord(record) {
   console.log(
-    isDryRun ? "[DRY_RUN]" : "",
+    IS_DRY_RUN ? "[DRY_RUN]" : "",
     "Delete",
     record.browserid,
     record.version
   );
-  if (isDryRun) {
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(`${rsBrowsersRecordsEndpoint}/${record.id}`, {
+  const response = await fetch(`${RECORDS_ENDPOINT}/${record.id}`, {
     method: "DELETE",
-    headers,
+    headers: HEADERS,
   });
   const succesful = response.status == 200;
   if (!succesful) {
@@ -271,15 +267,15 @@ async function deleteRecord(record) {
  * Ask for review on the collection.
  */
 async function requestReview() {
-  console.log(isDryRun ? "[DRY_RUN]" : "", "Requesting review");
-  if (isDryRun) {
+  console.log(IS_DRY_RUN ? "[DRY_RUN]" : "", "Requesting review");
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(rsBrowsersCollectionEndpoint, {
+  const response = await fetch(COLLECTION_ENDPOINT, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-review" } }),
-    headers,
+    headers: HEADERS,
   });
   if (response.status === 200) {
     console.log("Review requested ✅");
@@ -295,15 +291,15 @@ async function requestReview() {
  * ⚠️ This only works on the `dev` server.
  */
 async function approveChanges() {
-  console.log(isDryRun ? "[DRY_RUN]" : "", "Approving changes");
-  if (isDryRun) {
+  console.log(IS_DRY_RUN ? "[DRY_RUN]" : "", "Approving changes");
+  if (IS_DRY_RUN) {
     return true;
   }
 
-  const response = await fetch(rsBrowsersCollectionEndpoint, {
+  const response = await fetch(COLLECTION_ENDPOINT, {
     method: "PATCH",
     body: JSON.stringify({ data: { status: "to-sign" } }),
-    headers,
+    headers: HEADERS,
   });
   if (response.status === 200) {
     console.log("Changes approved ✅");
@@ -314,7 +310,11 @@ async function approveChanges() {
   }
 }
 
-function getFlatBrowsersMdnData() {
+async function getFlatBrowsersMdnData() {
+  // See https://github.com/mdn/browser-compat-data.
+  const response = await fetch("https://unpkg.com/@mdn/browser-compat-data/data.json");
+  const compatData = await response.json();
+
   const browsers = [];
   for (const [browserid, browserInfo] of Object.entries(compatData.browsers)) {
     for (const [releaseNumber, releaseInfo] of Object.entries(
